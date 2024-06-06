@@ -37,4 +37,4 @@ def d_dtcn():
     root.mainloop()
 
 # Call the function to launch the GUI
-d_dtcn()
+# d_dtcn()

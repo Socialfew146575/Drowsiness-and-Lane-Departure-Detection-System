@@ -1,24 +1,12 @@
-################################################################################
-######## LANE DETECTION PROJECT ################################################
-################################################################################
-# BY:           CAN OZCIVELEK
-# DATE:         DECEMBER 2018
-#
-# DESCRIPTION:  THIS  PROJECT WAS CREATED  TO DEMONSTRATE HOW  A  LANE DETECTION
-#               SYSTEM WORKS  ON CARS EQUIPPED WITH A FRONT  FACING CAMERA. WITH
-#               THE HELP OF OPENCV LIBRARIES IT IS POSSIBLE TO DESIGN ALGORITHMS
-#               THAT CAN  IDENTIFY LANE LINES, AND PREDICT STEERING ANGLES, ALSO
-#               WARN  DRIVERS  IF THE CAR IS  DRIFTING  AWAY FROM  CURRENT LANE.
-################################################################################
 
-
-# IMPORT NECESSARY LIBRARIES
 import cv2
 import numpy as np
 import os
 from scipy import optimize
 from matplotlib import pyplot as plt, cm, colors
 from playsound import playsound
+import threading
+import time
 
 # Defining variables to hold meter-to-pixel conversion
 ym_per_pix = 30 / 720
@@ -30,26 +18,20 @@ xm_per_pix = 3.7 / 720
 CWD_PATH = os.getcwd()
 
 
+def play_sound():
+    playsound('sound files/alarm.mp3')
 
-################################################################################
-######## START - FUNCTIONS TO PERFORM IMAGE PROCESSING #########################
-################################################################################
 
-################################################################################
-#### START - FUNCTION TO READ AN INPUT IMAGE ###################################
+
 def readVideo():
 
     # Read input video from current working directory
     inpImage = cv2.VideoCapture(os.path.join(CWD_PATH, 'challenge.mp4'))
 
     return inpImage
-#### END - FUNCTION TO READ AN INPUT IMAGE #####################################
-################################################################################
 
 
 
-################################################################################
-#### START - FUNCTION TO PROCESS IMAGE #########################################
 def processImage(inpImage):
 
     # Apply HLS color filtering to filter out white lane lines
@@ -66,21 +48,18 @@ def processImage(inpImage):
     canny = cv2.Canny(blur, 40, 60)
 
     # Display the processed images
-##    cv2.imshow("Image", inpImage)
-##    cv2.imshow("HLS Filtered", hls_result)
-##    cv2.imshow("Grayscale", gray)
-##    cv2.imshow("Thresholded", thresh)
-##    cv2.imshow("Blurred", blur)
-##    cv2.imshow("Canny Edges", canny)
+    # cv2.imshow("Image", inpImage)
+    # cv2.imshow("HLS Filtered", hls_result)
+    # cv2.imshow("Grayscale", gray)
+    # cv2.imshow("Thresholded", thresh)
+    # cv2.imshow("Blurred", blur)
+    # cv2.imshow("Canny Edges", canny)
 
     return image, hls_result, gray, thresh, blur, canny
-#### END - FUNCTION TO PROCESS IMAGE ###########################################
-################################################################################
 
 
 
-################################################################################
-#### START - FUNCTION TO APPLY PERSPECTIVE WARP ################################
+
 def perspectiveWarp(inpImage):
 
     # Get image size
@@ -117,13 +96,9 @@ def perspectiveWarp(inpImage):
     # cv2.imshow("Birdseye Right", birdseyeRight)
 
     return birdseye, birdseyeLeft, birdseyeRight, minv
-#### END - FUNCTION TO APPLY PERSPECTIVE WARP ##################################
-################################################################################
 
 
 
-################################################################################
-#### START - FUNCTION TO PLOT THE HISTOGRAM OF WARPED IMAGE ####################
 def plotHistogram(inpImage):
 
     histogram = np.sum(inpImage[inpImage.shape[0] // 2:, :], axis = 0)
@@ -138,13 +113,10 @@ def plotHistogram(inpImage):
     # Return histogram and x-coordinates of left & right lanes to calculate
     # lane width in pixels
     return histogram, leftxBase, rightxBase
-#### END - FUNCTION TO PLOT THE HISTOGRAM OF WARPED IMAGE ######################
-################################################################################
 
 
 
-################################################################################
-#### START - APPLY SLIDING WINDOW METHOD TO DETECT CURVES ######################
+
 def slide_window_search(binary_warped, histogram):
 
     # Find the start of left and right lane lines using histogram info
@@ -222,13 +194,10 @@ def slide_window_search(binary_warped, histogram):
     plt.ylim(720, 0)
 
     return ploty, left_fit, right_fit, ltx, rtx
-#### END - APPLY SLIDING WINDOW METHOD TO DETECT CURVES ########################
-################################################################################
 
 
 
-################################################################################
-#### START - APPLY GENERAL SEARCH METHOD TO DETECT CURVES ######################
+
 def general_search(binary_warped, left_fit, right_fit):
 
     nonzero = binary_warped.nonzero()
@@ -287,13 +256,10 @@ def general_search(binary_warped, left_fit, right_fit):
     ret['ploty'] = ploty
 
     return ret
-#### END - APPLY GENERAL SEARCH METHOD TO DETECT CURVES ########################
-################################################################################
 
 
 
-################################################################################
-#### START - FUNCTION TO MEASURE CURVE RADIUS ##################################
+
 def measure_lane_curvature(ploty, leftx, rightx):
 
     leftx = leftx[::-1]  # Reverse to match top-to-bottom in y
@@ -321,13 +287,10 @@ def measure_lane_curvature(ploty, leftx, rightx):
         curve_direction = 'Straight'
 
     return (left_curverad + right_curverad) / 2.0, curve_direction
-#### END - FUNCTION TO MEASURE CURVE RADIUS ####################################
-################################################################################
 
 
 
-################################################################################
-#### START - FUNCTION TO VISUALLY SHOW DETECTED LANES AREA #####################
+
 def draw_lane_lines(original_image, warped_image, Minv, draw_info):
 
     leftx = draw_info['leftx']
@@ -353,12 +316,11 @@ def draw_lane_lines(original_image, warped_image, Minv, draw_info):
     result = cv2.addWeighted(original_image, 1, newwarp, 0.3, 0)
 
     return pts_mean, result
-#### END - FUNCTION TO VISUALLY SHOW DETECTED LANES AREA #######################
-################################################################################
 
 
-#### START - FUNCTION TO CALCULATE DEVIATION FROM LANE CENTER ##################
-################################################################################
+
+
+
 def offCenter(meanPts, inpFrame):
 
     # Calculating deviation in meters
@@ -368,13 +330,11 @@ def offCenter(meanPts, inpFrame):
     direction = "left" if deviation < 0 else "right"
 
     return deviation, direction
-################################################################################
-#### END - FUNCTION TO CALCULATE DEVIATION FROM LANE CENTER ####################
 
 
 
-################################################################################
-#### START - FUNCTION TO ADD INFO TEXT TO FINAL IMAGE ##########################
+
+
 def addText(img, radius, direction, deviation, devDirection):
 
     # Add the radius and center position to the image
@@ -396,27 +356,16 @@ def addText(img, radius, direction, deviation, devDirection):
     cv2.putText(img, deviation_text, (50, 200), cv2.FONT_HERSHEY_TRIPLEX, 0.8, (0,100, 200), 2, cv2.LINE_AA)
 
     return img
-#### END - FUNCTION TO ADD INFO TEXT TO FINAL IMAGE ############################
-################################################################################
 
-################################################################################
-######## END - FUNCTIONS TO PERFORM IMAGE PROCESSING ###########################
-################################################################################
 
-################################################################################
-################################################################################
-################################################################################
-################################################################################
 
-################################################################################
-######## START - MAIN FUNCTION #################################################
-################################################################################
+
+
 
 # Read the input image
 image = readVideo()
 
-################################################################################
-#### START - LOOP TO PLAY THE INPUT IMAGE ######################################
+
 while True:
 
     _, frame = image.read()
@@ -465,15 +414,22 @@ while True:
 
     deviation, directionDev = offCenter(meanPts, frame)
     
-    alarm_limit = 3  # Set the number of times you want the alarm to play
+    alarm_limit = 15  # Set the number of times you want the alarm to play
     alarm_count = 0
-    
-    if deviation <= -3.7 or deviation >= 3.7:
-          
-          if alarm_count < alarm_limit:
-              playsound('sound files/alarm.mp3')
-          
+    last_alarm_time = 0
+    alarm_interval = 5  # Interval between alarms in seconds
 
+    if deviation <= -3.7 or deviation >= 3.7:
+       current_time = time.time()
+       if current_time - last_alarm_time >= alarm_interval:
+            if alarm_count < alarm_limit:
+                threading.Thread(target=play_sound).start()
+                alarm_count += 1
+                last_alarm_time = current_time
+
+              
+          
+    
     
 
     # Adding text to our final image
@@ -487,16 +443,13 @@ while True:
     if cv2.waitKey(1) == 13:
         break
 
-#### END - LOOP TO PLAY THE INPUT IMAGE ########################################
-################################################################################
+
 
 # Cleanup
 image.release()
 cv2.destroyAllWindows()
 
-################################################################################
-######## END - MAIN FUNCTION ###################################################
-################################################################################
+
 
 
 
