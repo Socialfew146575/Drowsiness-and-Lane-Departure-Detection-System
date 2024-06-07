@@ -89,7 +89,7 @@ print("[INFO] Loading Camera...")
 vs = VideoStream(src=0).start()
 time.sleep(2) 
 
-assure_path_exists("dataset/")
+assure_path_exists("history/")
 count_sleep = 0
 count_yawn = 0 
 
@@ -156,7 +156,7 @@ while True:
             if FRAME_COUNT >= CONSECUTIVE_FRAMES: 
                 count_sleep += 1
                 # Add the frame to the dataset as proof of drowsy driving
-                cv2.imwrite("dataset/frame_sleep%d.jpg" % count_sleep, frame)
+                cv2.imwrite("history/frame_sleep%d.jpg" % count_sleep, frame)
                 threading.Thread(target=play_sound, args=('sound files/alarm.mp3',)).start()
                 cv2.putText(frame, "DROWSINESS ALERT!", (270, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         else: 
@@ -170,7 +170,7 @@ while True:
             cv2.drawContours(frame, [mouth], -1, (0, 0, 255), 1) 
             cv2.putText(frame, "DROWSINESS ALERT!", (270, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
             # Add the frame to the dataset as proof of drowsy driving
-            cv2.imwrite("dataset/frame_yawn%d.jpg" % count_yawn, frame)
+            cv2.imwrite("history/frame_yawn%d.jpg" % count_yawn, frame)
             threading.Thread(target=play_sound, args=('sound files/alarm.mp3',)).start()
             threading.Thread(target=play_sound, args=('sound files/warning_yawn.mp3',)).start()
 
